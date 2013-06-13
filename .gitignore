@@ -1,0 +1,8 @@
+*.beam
+.eunit
+deps/*
+apps/sdgh/ebin
+*~
+dev/*
+doc/*
+rel/sdgh
