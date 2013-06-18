@@ -8,7 +8,7 @@
         write/3
         ]).
 
--define(TIMEOUT, 5000).
+-define(TIMEOUT, 45000).
 
 %% Public API
 
@@ -37,7 +37,7 @@ do_write(Client, ProdKey, Payload) ->
 
 wait_for_reqid(ReqID, Timeout) ->
     receive
-    {ReqID, ok} -> ok;
+        {ReqID, ok} -> ok;
         {ReqID, ok, Val} -> {ok, Val}
     after Timeout ->
         {error, timeout}

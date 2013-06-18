@@ -35,10 +35,12 @@
                 num_w = 0 :: non_neg_integer()
 }).
 
+-define(TIMEOUT, 8000).
+
 %% API
 
 start_link(ReqID, From, Client, {Bucket, Key}, Payload) ->
-    get_fsm:start_link(?MODULE,
+    gen_fsm:start_link(?MODULE,
         [ReqID, From, Client, {Bucket, Key}, Payload], []).
 
 write(Client, {Bucket, Key}, Payload) ->

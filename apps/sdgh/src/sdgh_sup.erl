@@ -26,7 +26,7 @@ init(_Args) ->
 
     VMaster = {sdgh_vnode_master,
                   {riak_core_vnode_master, start_link, [sdgh_vnode]},
-                  permanent, 5000, worker, [riak_core_vnode_master]},
+                  permanent, 6500, worker, [riak_core_vnode_master]},
 
     WriteFSMs = {sdgh_write_fsm_sup,
                     {sdgh_write_fsm_sup, start_link, []},
