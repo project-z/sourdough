@@ -1,0 +1,59 @@
+#
+# butter knife... a knife that's not that sharp =)
+#
+ex() {
+    for d in dev/dev*; do $d/bin/sdgh $1; done
+}
+
+start() {
+    ex start
+}
+
+stop() {
+    ex stop
+}
+
+ping() {
+    ex ping
+}
+
+setup() {
+    ex ping
+    for d in dev/dev{2,3,4,5,6};
+        do $d/bin/sdgh-admin join sdgh1@127.0.0.1;
+    done
+    status
+}
+
+attach() {
+    NODES=(dev/dev*/)
+    # pick a pseudo random node
+    node=${NODES[$RANDOM % ${#NODES[@]}]}
+    echo "Attaching to "$node
+    ./$node/bin/sdgh attach
+}
+
+status() {
+    echo "hmmm... what's the cluster look like?"
+    NODES=(dev/dev*/)
+    # pick a pseudo random node
+    node=${NODES[$RANDOM % ${#NODES[@]}]}
+    ./$node/bin/sdgh-admin member_status
+}
+
+ready() {
+    NODES=(dev/dev*/)
+    # pick a pseudo random node
+    node=${NODES[$RANDOM % ${#NODES[@]}]}
+    ./$node/bin/sdgh-admin ringready
+}
+
+admin() {
+    NODES=(dev/dev*/)
+    # pick a pseudo random node
+    node=${NODES[$RANDOM % ${#NODES[@]}]}
+    ./$node/bin/sdgh-admin $1
+}
+
+# call arguments verbatim:
+$@
