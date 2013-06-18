@@ -2,6 +2,8 @@
 
 -behaviour(application).
 
+-include("sdgh.hrl").
+
 %% Application callbacks
 -export([start/2, stop/1]).
 
@@ -12,9 +14,12 @@
 start(_StartType, _StartArgs) ->
     case sdgh_sup:start_link() of
         {ok, Pid} ->
+            ?PRINT(Pid),
             ok = riak_core:register([{vnode_module, sdgh_vnode}]),
-            ok = riak_core_ring_events:add_guarded_handler(sdgh_ring_event_handler, []),
-            ok = riak_core_node_watcher_events:add_guarded_handler(sdgh_node_event_handler, []),
+            ok = riak_core_ring_events:add_guarded_handler(
+                                    sdgh_ring_event_handler, []),
+            ok = riak_core_node_watcher_events:add_guarded_handler(
+                                    sdgh_node_event_handler, []),
             ok = riak_core_node_watcher:service_up(sdgh, self()),
             {ok, Pid};
         {error, Reason} ->

@@ -1,6 +1,7 @@
 -module(sdgh_vnode).
 -behaviour(riak_core_vnode).
 -include("sdgh.hrl").
+-include_lib("riak_core/include/riak_core_vnode.hrl").
 
 -export([start_vnode/1,
          init/1,
@@ -17,18 +18,40 @@
          handle_coverage/4,
          handle_exit/3]).
 
--record(state, {partition}).
+-export([
+        write_event/4
+        ]).
+
+-record(state, {partition, context, payload, num_payload=0}).
+
+%% This is the name (as an atom) used by the supervisor when `sdgh_sup`
+%% is initialized... TODO - specific as a "write" vnode master, maybe?
+-define(MASTER, sdgh_vnode_master).
 
 %% API
 start_vnode(I) ->
     riak_core_vnode_master:get_vnode_pid(I, ?MODULE).
 
+write_event(Preflist, ReqID, {Bucket,Key}, Payload) ->
+    riak_core_vnode_master:command(Preflist,
+                                   {write, ReqID, {Bucket,Key}, Payload},
+                                   ?MASTER).
+
+%% Callbacks
 init([Partition]) ->
     {ok, #state { partition=Partition }}.
 
 %% Sample command: respond to a ping
 handle_command(ping, _Sender, State) ->
     {reply, {pong, State#state.partition}, State};
+handle_command({write, ReqID, {Bucket,Key}, Payload}, _Sender, State) ->
+    Context = {Bucket, Key},
+    S0 = State#state{context=Context, payload=Payload},
+    %% write data to disk...
+    ?PRINT(S0),
+    io:format("well, we'd write this out if that was written...~n ~p => ~p",
+        [Context, Payload]),
+    {reply, {ok, ReqID}, S0};
 handle_command(Message, _Sender, State) ->
     ?PRINT({unhandled_command, Message}),
     {noreply, State}.
