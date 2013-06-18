@@ -1,0 +1,4 @@
+Payload = <<"BUCKET_OWNER BUCKET [28/Mar/2013:14:02:05 -0400] 10.223.45.60 REQUESTER REQUEST_ID OPERATION KEY \"GET /s?Referrer=https%3A%2F%2Fwww.google.com%2F&_k=245f2529ed3b9856dd5fa711d1fc459b4eea0d47&_p=2SJfisSPRDlodJSZVxtDiPonyB0%3D&_t=1364493714 HTTP/1.1\" 200 ERROR_CODE 43 OBJECT_SIZE TOTAL_TIME TURN_AROUND_TIME \"http://gorillacoffee.com/\" \"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.22 (KHTML, like Gecko) Chrome/25.0.1364.172 Safari/537.22\"">>.
+
+Bucket = <<"Viddler-Promo">>.
+Key = <<"banner_click">>.
