@@ -49,8 +49,9 @@ handle_command({write, ReqID, {Bucket,Key}, Payload}, _Sender, State) ->
     S0 = State#state{context=Context, payload=Payload},
     %% write data to disk...
     ?PRINT(S0),
-    io:format("well, we'd write this out if that was written...~n ~p => ~p",
+    io:format("well, we'd write this out if that was written...~n ~p => ~p~n",
         [Context, Payload]),
+    ?PRINT(ReqID),
     {reply, {ok, ReqID}, S0};
 handle_command(Message, _Sender, State) ->
     ?PRINT({unhandled_command, Message}),
@@ -75,16 +76,22 @@ encode_handoff_item(_ObjectName, _ObjectValue) ->
     <<>>.
 
 is_empty(State) ->
+    io:format("Whoa... is_empty/1 is being called?!?!?!? ~n~n"),
+    ?PRINT(State),
     {true, State}.
 
 delete(State) ->
+    ?PRINT(State),
     {ok, State}.
 
 handle_coverage(_Req, _KeySpaces, _Sender, State) ->
     {stop, not_implemented, State}.
 
 handle_exit(_Pid, _Reason, State) ->
+    ?PRINT(State),
     {noreply, State}.
 
 terminate(_Reason, _State) ->
+    ?PRINT(_Reason),
+    ?PRINT(_State),
     ok.

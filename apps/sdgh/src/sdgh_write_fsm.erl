@@ -49,6 +49,7 @@ write(Client, {Bucket, Key}, Payload) ->
     ReqID = mk_reqid(),
     sdgh_write_fsm_sup:start_write_fsm(
         [ReqID, self(), Client, {Bucket, Key}, Payload]),
+    io:format("... is this point ever REACHED?!?!?! ~n~n"),
     {ok, ReqID}.
 
 %% States
@@ -81,11 +82,13 @@ execute(timeout, SD0=#state{req_id=ReqID,
                             payload=Payload,
                             preflist=Preflist}) ->
     ?PRINT(SD0),
-    sdgh_vnode:write_event(Preflist, ReqID, {Bucket,Key}, Payload),
+    RetMsg = sdgh_vnode:write_event(Preflist, ReqID, {Bucket,Key}, Payload),
+    ?PRINT(RetMsg),
     {next_state, waiting, SD0}.
 
 %% @doc Wait for W write reqs to respond.
 waiting({ok, ReqID}, SD0=#state{from=From, num_w=NumW0}) ->
+    io:format("we're in the `waiting` state, that's good~n~n"),
     NumW = NumW0 + 1,
     SD = SD0#state{num_w=NumW},
     ?PRINT(SD),
@@ -96,7 +99,7 @@ waiting({ok, ReqID}, SD0=#state{from=From, num_w=NumW0}) ->
             {stop, normal, SD};
         %% "true" case - so when we're not equal to our W value
         true ->
-            io:format("waiting still... "),
+            io:format("waiting still... ~n~n"),
             {next_state, waiting, SD}
     end.
 
@@ -110,7 +113,7 @@ init([ReqID, From, Client, {Bucket, Key}, Payload]) ->
                 client=Client,
                 context={Bucket, Key},
                 payload=Payload},
-    io:format("initializing..."),
+    io:format("initializing...~n~n"),
     ?PRINT(SD),
     {ok, prepare, SD, 0}.
 

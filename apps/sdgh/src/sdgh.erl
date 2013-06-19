@@ -38,7 +38,9 @@ do_write(Client, ProdKey, Payload) ->
 wait_for_reqid(ReqID, Timeout) ->
     receive
         {ReqID, ok} -> ok;
-        {ReqID, ok, Val} -> {ok, Val}
+        Msg ->  ?PRINT(Msg),
+                {ok, Msg}
     after Timeout ->
+        ?PRINT(Timeout),
         {error, timeout}
     end.
