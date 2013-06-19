@@ -15,9 +15,10 @@
     ]).
 
 start_write_fsm(Args) ->
-    ?PRINT(Args),
+    lager:warning("Supervising, like a boss from pid: ~p ~n~n", [self()]),
+    lager:warning("Starting write_fsm with: ~n~p~n~n", [Args]),
     Child = supervisor:start_child(?MODULE, Args),
-    ?PRINT(Child).
+    lager:warning("Response from start_child: ~p~n~n", [Child]).
 
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).

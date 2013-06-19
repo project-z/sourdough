@@ -22,8 +22,6 @@ start_link() ->
 %% ===================================================================
 
 init(_Args) ->
-    ?PRINT(_Args),
-
     VMaster = {sdgh_vnode_master,
                   {riak_core_vnode_master, start_link, [sdgh_vnode]},
                   permanent, 6500, worker, [riak_core_vnode_master]},

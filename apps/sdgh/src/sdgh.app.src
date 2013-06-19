@@ -1,12 +1,13 @@
 %% -*- erlang -*-
 {application, sdgh,
  [
-  {description, ""},
-  {vsn, "1"},
+  {description, "a breaded shapeling..."},
+  {vsn, "0.0.1"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib,
+                  lager,
                   riak_core
                  ]},
   {mod, { sdgh_app, []}},

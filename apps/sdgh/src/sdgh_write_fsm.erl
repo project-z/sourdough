@@ -44,19 +44,19 @@ start_link(ReqID, From, Client, {Bucket, Key}, Payload) ->
         [ReqID, From, Client, {Bucket, Key}, Payload], []).
 
 write(Client, {Bucket, Key}, Payload) ->
-    ?PRINT(Client),
-    ?PRINT({Bucket, Key}),
+    lager:warning("Client: ~p ~n", [Client]),
+    lager:warning("Context: ~p ~n", [{Bucket, Key}]),
     ReqID = mk_reqid(),
+
     sdgh_write_fsm_sup:start_write_fsm(
         [ReqID, self(), Client, {Bucket, Key}, Payload]),
-    io:format("... is this point ever REACHED?!?!?! ~n~n"),
     {ok, ReqID}.
 
 %% States
 
 %% @doc Prepare the write by calculating the _preference list_.
 prepare(timeout, SD0=#state{context={Bucket,Key}}) ->
-    ?PRINT(SD0),
+    lager:warning("In _prepare_ state: ~n ~p ~n~n", [SD0]),
     %% this is controlled by the function set in the tagged tuple
     %% containing `chash_keyfun` with the `default_bucket_props` within
     %% the `app.config` file within a release. Right now it's set to
@@ -81,27 +81,28 @@ execute(timeout, SD0=#state{req_id=ReqID,
                             context={Bucket,Key},
                             payload=Payload,
                             preflist=Preflist}) ->
-    ?PRINT(SD0),
-    RetMsg = sdgh_vnode:write_event(Preflist, ReqID, {Bucket,Key}, Payload),
-    ?PRINT(RetMsg),
+    lager:warning("In _execute_ state: ~n ~p ~n~n", [SD0]),
+    sdgh_vnode:write_event(Preflist, ReqID, {Bucket,Key}, Payload),
     {next_state, waiting, SD0}.
 
 %% @doc Wait for W write reqs to respond.
 waiting({ok, ReqID}, SD0=#state{from=From, num_w=NumW0}) ->
-    io:format("we're in the `waiting` state, that's good~n~n"),
+    lager:warning("In _waiting_ state: ~p : ~n ~p ~n~n", [{ok,ReqID},SD0]),
     NumW = NumW0 + 1,
     SD = SD0#state{num_w=NumW},
-    ?PRINT(SD),
     if
         NumW =:= ?W ->
-            ?PRINT(NumW),
             From ! {ReqID, ok},
             {stop, normal, SD};
         %% "true" case - so when we're not equal to our W value
         true ->
-            io:format("waiting still... ~n~n"),
             {next_state, waiting, SD}
-    end.
+    end;
+waiting(Msg, SD0) ->
+    lager:warning("In _waiting_ state: ~p : ~n ~p ~n~n", [Msg,SD0]),
+
+
+    {next_state, waiting, SD0}.
 
 %% Callbacks
 
@@ -113,8 +114,7 @@ init([ReqID, From, Client, {Bucket, Key}, Payload]) ->
                 client=Client,
                 context={Bucket, Key},
                 payload=Payload},
-    io:format("initializing...~n~n"),
-    ?PRINT(SD),
+    lager:warning("Initializing... ~n~n state:~n ~p~n~n"),
     {ok, prepare, SD, 0}.
 
 handle_info(_Info, _StateName, StateData) ->
@@ -129,6 +129,8 @@ handle_sync_event(_Event, _From, _StateName, StateData) ->
 code_change(_OldVsn, StateName, State, _Extra) -> {ok, StateName, State}.
 
 terminate(_Reason, _SN, _SD) ->
+    lager:warning("Terminate called... ~p : ~p ~n ~p ~n~n",
+            [_Reason, _SN, _SD]),
     ok.
 
 %% Internal Functions

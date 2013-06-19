@@ -36,10 +36,15 @@ do_write(Client, ProdKey, Payload) ->
     wait_for_reqid(ReqID, ?TIMEOUT).
 
 wait_for_reqid(ReqID, Timeout) ->
+    lager:warning("Entered into the wait method...~n~nwaiting for: ~p~n~n",
+                [ReqID]),
     receive
-        {ReqID, ok} -> ok;
-        Msg ->  ?PRINT(Msg),
-                {ok, Msg}
+        {ReqID, ok} ->
+            lager:warning("Received: ok from ~p", [ReqID]),
+            ok;
+        Msg ->
+            lager:warning("Received: ~p", [Msg]),
+            {ok, Msg}
     after Timeout ->
         ?PRINT(Timeout),
         {error, timeout}
