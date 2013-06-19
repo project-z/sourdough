@@ -5,6 +5,12 @@ ex() {
     for d in dev/dev*; do $d/bin/sdgh $1; done
 }
 
+up() {
+    start
+    setup
+    ready
+}
+
 start() {
     ex start
 }
@@ -17,8 +23,12 @@ ping() {
     ex ping
 }
 
+restart() {
+    ex restart
+}
+
 setup() {
-    ex ping
+    ping
     for d in dev/dev{2,3,4,5,6};
         do $d/bin/sdgh-admin join sdgh1@127.0.0.1;
     done
