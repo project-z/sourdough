@@ -2,3 +2,5 @@ Payload = <<"BUCKET_OWNER BUCKET [28/Mar/2013:14:02:05 -0400] 10.223.45.60 REQUE
 
 Bucket = <<"Viddler-Promo">>.
 Key = <<"banner_click">>.
+
+sdgh:write("to_erl", {Bucket,Key}, Payload).
