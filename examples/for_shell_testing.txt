@@ -4,3 +4,5 @@ Bucket = <<"Viddler-Promo">>.
 Key = <<"banner_click">>.
 
 sdgh:write("to_erl", {Bucket,Key}, Payload).
+
+PrefList = sdgh:get_dbg_preflist({Bucket,Key}).
