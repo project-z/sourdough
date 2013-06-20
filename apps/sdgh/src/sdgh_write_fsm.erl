@@ -82,6 +82,7 @@ execute(timeout, SD0=#state{req_id=ReqID,
                             payload=Payload,
                             preflist=Preflist}) ->
     lager:warning("In _execute_ state: ~n ~p ~n~n", [SD0]),
+    lager:warning("sdgh_write_fsm pid is: ~p~n~n", [self()]),
     sdgh_vnode:write_event(Preflist, ReqID, {Bucket,Key}, Payload),
     {next_state, waiting, SD0}.
 
