@@ -23,7 +23,8 @@
 -export([
     prepare/2,
     execute/2,
-    waiting/2]).
+    waiting/2,
+    waiting/3]).
 
 -record(state, {
                 req_id :: pos_integer(),
@@ -34,14 +35,14 @@
                 preflist :: riak_core_apl:preflist2(),
                 num_w = 0 :: non_neg_integer()
 }).
-
+%% record(state, {req_id, from, client, context, payload, preflist, num_w = 0}).
 -define(TIMEOUT, 8000).
 
 %% API
 
 start_link(ReqID, From, Client, {Bucket, Key}, Payload) ->
     gen_fsm:start_link(?MODULE,
-        [ReqID, From, Client, {Bucket, Key}, Payload], []).
+        [ReqID, From, Client, {Bucket, Key}, Payload], [{debug, [trace]}]).
 
 write(Client, {Bucket, Key}, Payload) ->
     lager:warning("Client: ~p ~n", [Client]),
@@ -101,9 +102,12 @@ waiting({ok, ReqID}, SD0=#state{from=From, num_w=NumW0}) ->
     end;
 waiting(Msg, SD0) ->
     lager:warning("In _waiting_ state: ~p : ~n ~p ~n~n", [Msg,SD0]),
-
-
     {next_state, waiting, SD0}.
+
+waiting(Msg, From, StateData) ->
+    lager:warning("In _waiting_ for async calls state: ~p from ~p ~n~n ~p~n~n",
+                [Msg, From, StateData]),
+    {next_state, waiting, StateData}.
 
 %% Callbacks
 
@@ -119,12 +123,18 @@ init([ReqID, From, Client, {Bucket, Key}, Payload]) ->
     {ok, prepare, SD, 0}.
 
 handle_info(_Info, _StateName, StateData) ->
+    lager:warning("One day - I want to be a programmer...:~p ~n ~p~n~p~n~p~n~n",
+        [?LINE,_Info, _StateName, StateData]),
     {stop,badmsg,StateData}.
 
 handle_event(_Event, _StateName, StateData) ->
+    lager:warning("One day - I want to be a programmer...:~p ~n ~p~n~p~n~p~n~n",
+        [?LINE,_Event, _StateName, StateData]),
     {stop,badmsg,StateData}.
 
 handle_sync_event(_Event, _From, _StateName, StateData) ->
+    lager:warning("One day - I want to be a programmer...:~p ~n ~p=>~p~n~p~n~p~n~n",
+        [?LINE, _Event, _From, _StateName, StateData]),
     {stop,badmsg,StateData}.
 
 code_change(_OldVsn, StateName, State, _Extra) -> {ok, StateName, State}.
