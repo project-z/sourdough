@@ -35,6 +35,7 @@ start_vnode(I) ->
 write_event(Preflist, ReqID, {Bucket,Key}, Payload) ->
     riak_core_vnode_master:command(Preflist,
                                    {write, ReqID, {Bucket,Key}, Payload},
+                                   {fsm, undefined, self()},
                                    ?MASTER).
 
 %% Callbacks
@@ -50,6 +51,7 @@ handle_command({write, ReqID, {Bucket,Key}, Payload}, _Sender, State) ->
     NumP = State#state.num_payload + 1,
     S0 = State#state{context=Context, payload=Payload, num_payload=NumP},
     %% write data to disk...
+    lager:warning("Who is the sender & how it is formatted: ~p ~n~n", [_Sender]),
     lager:warning("~p:handle_command:~n~n state:~n~p", [?MODULE,S0]),
     lager:warning("This is where we'd persist the event...~n ~p =>~n~p~n~n",
         [Msg, Payload]),
