@@ -115,7 +115,7 @@ init([ReqID, From, Client, {Bucket, Key}, Payload]) ->
                 client=Client,
                 context={Bucket, Key},
                 payload=Payload},
-    lager:warning("Initializing... ~n~n state:~n ~p~n~n"),
+    lager:warning("Initializing... ~n~n state:~n ~p~n~n", [SD]),
     {ok, prepare, SD, 0}.
 
 handle_info(_Info, _StateName, StateData) ->

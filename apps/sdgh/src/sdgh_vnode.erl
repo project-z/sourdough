@@ -19,10 +19,11 @@
          handle_exit/3]).
 
 -export([
-        write_event/4
+        write_event/4,
+        write_data_to_disk/3
         ]).
 
--record(state, {partition, context, payload, num_payload=0}).
+-record(state, {write_path, partition, context, payload, num_payload=0}).
 
 %% This is the name (as an atom) used by the supervisor when `sdgh_sup`
 %% is initialized... TODO - specific as a "write" vnode master, maybe?
@@ -40,21 +41,23 @@ write_event(Preflist, ReqID, {Bucket,Key}, Payload) ->
 
 %% Callbacks
 init([Partition]) ->
-    {ok, #state { partition=Partition }}.
+    {ok, WritePath} = application:get_env(sdgh, worker_write_path),
+    lager:warning("Well, write_path is: ~p ~n~n", [WritePath]),
+    {ok, #state { write_path=WritePath, partition=Partition }}.
 
 %% Sample command: respond to a ping
 handle_command(ping, _Sender, State) ->
     {reply, {pong, State#state.partition}, State};
 handle_command({write, ReqID, {Bucket,Key}, Payload}, _Sender, State) ->
     Context = {Bucket, Key},
-    Msg = {write, ReqID, {Bucket,Key}, Payload},
     NumP = State#state.num_payload + 1,
-    S0 = State#state{context=Context, payload=Payload, num_payload=NumP},
+    Path = State#state.write_path,
+    lager:warning("In handle_command, write_path is: ~p ~n~n", [Path]),
     %% write data to disk...
-    lager:warning("Who is the sender & how it is formatted: ~p ~n~n", [_Sender]),
+    Result = write_data_to_disk(Path, Context, Payload),
+    lager:warning("I guess it didn't work, eh? ~p ~n~n", [Result]),
+    S0 = State#state{context=Context, payload=Payload, num_payload=NumP},
     lager:warning("~p:handle_command:~n~n state:~n~p", [?MODULE,S0]),
-    lager:warning("This is where we'd persist the event...~n ~p =>~n~p~n~n",
-        [Msg, Payload]),
     {reply, {ok, ReqID}, S0};
 handle_command(Message, _Sender, State) ->
     lager:warning({unhandled_command, Message}),
@@ -97,3 +100,10 @@ handle_exit(_Pid, _Reason, State) ->
 terminate(_Reason, _State) ->
     lager:warning("Terminating...~n ~p~n~p~n~n", [_Reason, _State]),
     ok.
+
+write_data_to_disk(Path, {Bucket, Key}, Payload) ->
+    P1 = Path ++ binary_to_list(Bucket) ++ "/",
+    ok = filelib:ensure_dir(P1),
+    File = P1 ++ binary_to_list(Key) ++ ".event",
+    lager:warning("Trying to write to: ~p ~n~n Path was: ~p ~n~n", [File,P1]),
+    file:write_file(File, io_lib:fwrite("~p~n", [Payload])).
