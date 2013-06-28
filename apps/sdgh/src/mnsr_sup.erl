@@ -1,10 +1,9 @@
-%% @author author <author@example.com>
-%% @copyright YYYY author.
+%% @author Andrew Lenards <alenards@kissmetrics.com>
+%% @copyright Project-Z 2013.
 
-%% @doc Supervisor for the mnsr application.
+%% @doc Supervisor for the event processing application, Muenster (mnsr).
 
 -module(mnsr_sup).
--author('author <author@example.com>').
 
 -behaviour(supervisor).
 

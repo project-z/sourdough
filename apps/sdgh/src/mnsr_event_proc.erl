@@ -1,5 +1,5 @@
 %% @author Andrew Lenards <alenards@kissmetrics.com>
-%% @copyright Project-Z .
+%% @copyright Project-Z 2013.
 %% @doc Event processing & persistence resource.
 
 -module(mnsr_event_proc).
@@ -20,6 +20,8 @@
 -include_lib("webmachine/include/webmachine.hrl").
 
 -define(ROOT_DIR, "/tmp/mnsr/").
+-define(WORKER_MOD, sdgh).
+-define(WORKER_OP, write).
 
 -record(ctx, {mod, func}).
 
@@ -28,9 +30,11 @@
 %% Create a record, ``ctx``, for a context to be passed through to each
 %% method in the webmachine resource lifecycle.
 init([]) ->
-    lager:warning("do we mean even make it even? Did the module start? ~p~n~n",
-        ["....."]),
-    Ctx = #ctx{},
+    % sdgh:write/3
+    Ctx = #ctx{mod=?WORKER_MOD, func=?WORKER_OP},
+    {ok, Ctx};
+init([{Mod, Op}]) ->
+    Ctx = #ctx{mod=Mod, func=Op},
     {ok, Ctx}.
 
 
@@ -50,12 +54,12 @@ content_types_provided(RD, Ctx) ->
     {[{"text/plain", to_text}], RD, Ctx}.
 
 
-to_text(RD, Ctx) ->
+to_text(RD, Ctx = #ctx{mod=Module, func=Op}) ->
     %% keys in the path_info list: bucket, keyish
     Bucket = wrq:path_info(bucket, RD),
     Key = wrq:path_info(keyish, RD),
     Data = wrq:req_body(RD),
-    Success = case sdgh:write(?MODULE, {Bucket, Key}, Data) of
+    Success = case Module:Op(?MODULE, {Bucket, Key}, Data) of
             ok -> true;
             _  -> false
     end,
@@ -95,9 +99,15 @@ build_msg(Success, EventData) ->
 -include_lib("eunit/include/eunit.hrl").
 %% this is used in #wm_reqdata record...
 -include_lib("webmachine/include/wm_reqstate.hrl").
+
+
 %% use file:cwd() ++ "sdgh" to get where the write will occur...
 verify_init_test() ->
-    {ok, _Ctx} = init([]).
+    {ok, C0} = init([]),
+    %% we expect the default module:func to be sdgh:write, for ease of modification
+    %% we'll defined them as macros, ?WORKER_MOD:?WORKER_OP
+    ?WORKER_MOD = C0#ctx.mod,
+     ?WORKER_OP = C0#ctx.func.
 
 
 allowed_methods_test() ->
@@ -111,13 +121,17 @@ build_msg_test() ->
     {false, Msg2} = build_msg(false, [goat, goat, goat]),
     Msg1 =/= Msg2.
 
+
 process_post_test() ->
+    {ok, C1} = init([{mock_vnode, mock_write}]),
+    mock_vnode = C1#ctx.mod,
+    mock_write = C1#ctx.func,
+
     %%  We have the HTTP Method, Scheme (http or https), version, the URL path,
     %%  and any headers that we might need for our request record:
     %%
     %%   create(Method, Scheme, {1,1}, RawPath, mochiweb_headers:from_list(Headers))
     %%
-    {ok, Ctx} = init([]),
     R0 = wrq:create('POST', http, {1,1}, "/event/tauntauncoffee/hoth1",
                   mochiweb_headers:from_list([])),
     R1 = wrq:set_peer("127.0.0.1", R0),
@@ -128,13 +142,17 @@ process_post_test() ->
     RS = #wm_reqstate{bodyfetch=standard},
     R2 = R1#wm_reqdata{path_info=D2, wm_state=RS},
     RD = wrq:set_req_body(Payload, R2),
+    ok = mock_vnode:mock_write(?MODULE,{"tauntauncoffee","hoth1"},undefined),
+    %% for giggles, lets's verify our mock function so `erlc` will shut up
+    ok = mock_vnode:mock_write("ha", {"allthe","tuples"}, Payload),
+
     %% let's verify that we actually built the RD (Request Data) correctly
     "hoth1" = wrq:path_info(keyish, RD),
     "tauntauncoffee" = wrq:path_info(bucket, RD),
-    ?debugFmt("Req: ~p~n~n", [RD]).
-    % {Msg, RD, Ctx} = to_text(RD, Ctx),
-    % ?debugFmt("msg: ~p~n~n", [Msg]),
-    % {true, _More} = Msg.
+
+    {Msg, RD, _C2} = to_text(RD, C1),
+    ?debugFmt("msg: ~p~n~n", [Msg]),
+    {true, _More} = Msg.
 
 
 -endif.

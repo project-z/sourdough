@@ -1,5 +1,6 @@
 -module(sdgh_vnode).
 -behaviour(riak_core_vnode).
+
 -include("sdgh.hrl").
 -include_lib("riak_core/include/riak_core_vnode.hrl").
 
