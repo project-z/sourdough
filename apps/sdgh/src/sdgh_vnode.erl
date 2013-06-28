@@ -28,6 +28,7 @@
 %% This is the name (as an atom) used by the supervisor when `sdgh_sup`
 %% is initialized... TODO - specific as a "write" vnode master, maybe?
 -define(MASTER, sdgh_vnode_master).
+-define(DEFAULT_PATH, "sdgh").
 
 %% API
 start_vnode(I) ->
@@ -41,9 +42,11 @@ write_event(Preflist, ReqID, {Bucket,Key}, Payload) ->
 
 %% Callbacks
 init([Partition]) ->
-    {ok, WritePath} = application:get_env(sdgh, worker_write_path),
-    lager:warning("Well, write_path is: ~p ~n~n", [WritePath]),
-    {ok, #state { write_path=WritePath, partition=Partition }}.
+    Path = case application:get_env(sdgh, worker_write_path) of
+                {ok, WritePath} -> WritePath;
+                _Any -> ?DEFAULT_PATH
+            end,
+    {ok, #state{ write_path=Path, partition=Partition }}.
 
 %% Sample command: respond to a ping
 handle_command(ping, _Sender, State) ->
@@ -54,8 +57,7 @@ handle_command({write, ReqID, {Bucket,Key}, Payload}, _Sender, State) ->
     Path = State#state.write_path,
     lager:warning("In handle_command, write_path is: ~p ~n~n", [Path]),
     %% write data to disk...
-    Result = write_data_to_disk(Path, Context, Payload),
-    lager:warning("I guess it didn't work, eh? ~p ~n~n", [Result]),
+    ok = write_data_to_disk(Path, Context, Payload),
     S0 = State#state{context=Context, payload=Payload, num_payload=NumP},
     lager:warning("~p:handle_command:~n~n state:~n~p", [?MODULE,S0]),
     {reply, {ok, ReqID}, S0};
@@ -94,16 +96,81 @@ handle_coverage(_Req, _KeySpaces, _Sender, State) ->
     {stop, not_implemented, State}.
 
 handle_exit(_Pid, _Reason, State) ->
-    lager:warning("Exiting...~n ~p~n~p~n~p~n", [_Pid, _Reason, State]),
     {noreply, State}.
 
 terminate(_Reason, _State) ->
-    lager:warning("Terminating...~n ~p~n~p~n~n", [_Reason, _State]),
     ok.
 
+build_path(BasePath, Folder, Suffix) ->
+    case is_binary(Folder) of
+            true -> lists:concat([BasePath, binary_to_list(Folder), Suffix]);
+            false -> BasePath ++ Folder ++ Suffix
+    end.
+
 write_data_to_disk(Path, {Bucket, Key}, Payload) ->
-    P1 = Path ++ binary_to_list(Bucket) ++ "/",
+    P1 = build_path(Path, Bucket, "/"),
+    File = build_path(P1, Key, ".event"),
     ok = filelib:ensure_dir(P1),
-    File = P1 ++ binary_to_list(Key) ++ ".event",
+
     lager:warning("Trying to write to: ~p ~n~n Path was: ~p ~n~n", [File,P1]),
-    file:write_file(File, io_lib:fwrite("~p~n", [Payload])).
+    file:write_file(File, Payload).
+
+%%===================================================================
+%% Test code
+%%===================================================================
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+verify_init_test() ->
+    {ok, State} = init([9990090909]),
+    ?DEFAULT_PATH = State#state.write_path,
+    9990090909 = State#state.partition.
+
+build_path_reg_string_test() ->
+    "/tmp/qux/" = build_path("/tmp/", "qux", "/"),
+    "/tmp/qux/goo.ndy" = build_path(build_path("/tmp/", "qux", "/"),
+        "goo", ".ndy").
+
+write_data_to_disk_bitdata_test() ->
+    os:cmd("rm -rf /tmp/qux"),
+    P1 = "/tmp/qux/",
+    Bucket = <<"Cobain">>,
+    Key = <<"chim_chim">>,
+    Payload = <<"I'm on a plain, I can't complain; Somewhere I've heard this before">>,
+    ok = write_data_to_disk(P1, {Bucket, Key}, Payload),
+    Fullname = build_path(build_path(P1, Bucket, "/"), Key, ".event"),
+    BinContents = list_to_binary(os:cmd("cat " ++ Fullname)),
+    BinContents =:= Payload.
+
+write_data_to_disk_reg_data_test() ->
+    os:cmd("rm -rf /tmp/qux"),
+    P1 = "/tmp/qux/",
+    Bucket = "Cobain",
+    Key = "chim_chim",
+    Payload = "I'm on a plain, I can't complain; Somewhere I've heard this before",
+    ok = write_data_to_disk(P1, {Bucket, Key}, Payload),
+    Fullname = build_path(build_path(P1, Bucket, "/"), Key, ".event"),
+    Payload =:= os:cmd("cat " ++ Fullname).
+
+%% handle_command({write, ReqID, {Bucket,Key}, Payload}, _Sender, State) ->
+handle_command_write_test() ->
+    os:cmd("rm -rf /tmp/qux"),
+    ReqID = 114811747,
+    P1 = "/tmp/qux/",
+    Bucket = <<"Cobain">>,
+    Key = <<"chim_chim">>,
+    Payload = <<"I'm on a plain, I can't complain; Somewhere I've heard this before">>,
+    %% get a State data record from init/1
+    {ok, State} = init([90990909650]),
+    %% jam a different, local path into the StateData
+    S0 = State#state{ write_path=P1 },
+    NumP = State#state.num_payload,
+    Resp = handle_command({write, ReqID, {Bucket,Key}, Payload}, "eunit", S0),
+    {reply, {ok, ReqID}, S1} = Resp,
+    Payload = S1#state.payload,
+    ?assert(NumP < S1#state.num_payload),
+    Fullname = build_path(build_path(P1, Bucket, "/"), Key, ".event"),
+    Payload =:= os:cmd("cat " ++ Fullname).
+
+-endif.

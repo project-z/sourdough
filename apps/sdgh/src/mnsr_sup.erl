@@ -45,7 +45,7 @@ init([]) ->
     {ok, App} = application:get_application(?MODULE),
     {ok, Dispatch} = file:consult(filename:join([priv_dir(App),
                                                  "dispatch.conf"])),
-    Port = case application:get_env(mnsr, webmachine_port) of
+    Port = case application:get_env(sdgh, webmachine_port) of
             {ok, WMPort} -> WMPort;
             _ -> 8000
           end,

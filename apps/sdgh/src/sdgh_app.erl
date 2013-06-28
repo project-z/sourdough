@@ -12,7 +12,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    case sdgh_sup:start_link() of
+    SdghResult = case sdgh_sup:start_link() of
         {ok, Pid} ->
             ?PRINT(Pid),
             ok = riak_core:register([{vnode_module, sdgh_vnode}]),
@@ -24,7 +24,24 @@ start(_StartType, _StartArgs) ->
             {ok, Pid};
         {error, Reason} ->
             {error, Reason}
-    end.
+    end,
+    MnsrResult = case mnsr_sup:start_link() of
+        {ok, MnsrPid} ->
+            {ok, MnsrPid};
+        {error, MnsrReason} ->
+            {error, MnsrReason}
+    end,
+    webmachine_router:add_route({["boo"], mnsr_resource, []}),
+    webmachine_router:add_route({["event", bucket, keyish], mnsr_event_proc, []}),
+    %% This is going to be problematic, the two start sequences and only
+    %% reporting the Sourdough start result, this should likely be merged &
+    %% reported when there is an error in either case...
+    %%
+    %% So, if SdghResult = {error, _} or MnsrResult = {error, _} then return
+    %% return {error, [(SdghReason|MnsrReason)]}
+    ?PRINT(SdghResult),
+    ?PRINT(MnsrResult),
+    SdghResult.
 
 stop(_State) ->
     ok.
